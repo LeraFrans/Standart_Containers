@@ -1,51 +1,3 @@
-//       DONE
-        // class ListNode;
-        // class ListIterator;
-        // void print_list();
-        // SequenceContainer();                    //default constructor, creates empty list
-        // SequenceContainer(size_type n);         //parameterized constructor, creates the list of size n
-        // SequenceContainer(const SequenceContainer &l);  //copy constructor
-        // SequenceContainer(SequenceContainer &&l);   //move constructor
-        // ~SequenceContainer();                   //destructor
-        // const_reference front();    //access the first element
-        // const_reference back();     //access the last element
-        // reference operator[](size_type pos);  //access specified element
-        // iterator begin();  //returns an iterator to the beginning
-        // iterator end();  //returns an iterator to the end
-        // void clear();      //clears the contents
-        // iterator insert(iterator pos, const_reference value) //inserts element into concrete pos and returns the iterator that points to the new element
-        // void push_back(const_reference value);        //adds an element to the end
-        // void pop_front();                             //removes the first element
-        // void push_front(const_reference value);       //adds an element to the head
-        // void erase(iterator pos);                     //erases element at pos
-        // void pop_back();                              //removes the last element
-        // reference at(size_type pos);   //access specified element with bounds checking
-        // bool empty();         //checks whether the container is empty
-        // size_type size();     //returns the number of elements
-        // void fill(const_reference value);  //assigns the given value value to all elements in the container.
-        // void splice(struct ListIterator pos, SequenceContainer& other); //transfers elements from list other starting from pos
-        // void unique();                                //removes consecutive duplicate elements
-        // void reverse();                               //reverses the order of the elements
-        // void sort();                                  //sorts the elements
-        // void merge(SequenceContainer& other);         //merges two sorted lists
-        // void swap(SequenceContainer& other);          // меняем местами содержимое
-        // SequenceContainer(std::initializer_list<value_type> const &items); //initializer list constructor, creates list initizialized using std::initializer_list
-        // operator=(SequenceContainer &&l);       //assignment operator overload for moving object
-        // size_type max_size(); //returns the maximum possible number of elements
-        //iterator insert_many(const_iterator pos, Args&&... args); //Inserts new elements into the container directly before pos.  FOR List, Vector.
-        //void insert_many_back(Args&&... args)  //Appends new elements to the end of the container.  FOR List, Vector, Queue.
-        //void insert_many_front(Args&&... args); // Appends new elements to the top of the container. FOR List, Stack.
-
-
-//   NOT DONE, BUT NOT FOR LIST
-
-            // Type* data();  //direct access to the underlying array
-            // iterator array_data();  //direct access to the underlying array
-            // void reserve(size_type size); //allocate storage of size elements and copies current array elements to a newely allocated array
-            // size_type capacity();  //returns the number of elements that can be held in currently allocated storage
-            // void shrink_to_fit(); //reduces memory usage by freeing unused memory
-            
-
 #ifndef S21_SEQUENCE_CONTAINER_H_
 #define S21_SEQUENCE_CONTAINER_H_
 
@@ -130,7 +82,40 @@ class SequenceContainer {
         SequenceContainer(const SequenceContainer &l);  //copy constructor
         SequenceContainer(SequenceContainer &&l);       //move constructor
         ~SequenceContainer();                   //destructor
-        operator=(SequenceContainer &&l);       //assignment operator overload for moving object
+        //SequenceContainer& operator=(SequenceContainer<Type>&&l);       //assignment operator overload for moving object
+
+    SequenceContainer& operator=(SequenceContainer<Type>&& l) {
+    // Обмен указателями
+    ListNode* tempHead = this->head;
+    ListNode* tempTail = this->tail;
+    //int tempCountOfElem = this->count_of_elem;
+
+    this->head = l.head;
+    this->tail = l.tail;
+    this->count_of_elem = l.count_of_elem;
+
+    // Освобождение памяти исходного объекта
+    l.head = nullptr;
+    l.tail = nullptr;
+    l.count_of_elem = 0;
+
+    // Перепривязка указателей, если они были связаны
+    if (tempHead != nullptr) {
+        tempHead->prev = nullptr;
+        tempHead->next = this->head;
+    }
+    if (tempTail != nullptr) {
+        tempTail->prev = this->tail;
+        tempTail->next = nullptr;
+    }
+
+    // Если мы перемещаем в себя, нужно очистить предыдущее состояние
+    if (&l == this) {
+        clear();
+    }
+
+    return *this;
+}
 
         //Capacity
         bool empty() { return this->head == nullptr; }         //checks whether the container is empty
@@ -138,12 +123,11 @@ class SequenceContainer {
         
         //Modifiers
         void swap(SequenceContainer& other);          //swaps the contents
-//
         protected:
 
         //Element access
-        const_reference front() {return this->head;}  //access the first element
-        const_reference back() {return this->tail;}   //access the last element
+        const_reference front() const {return this->head->data;}  //access the first element
+        const_reference back() const {return this->tail->data;}   //access the last element
 
         //Iterators
         iterator begin() { return ListIterator(this->head); };  //returns an iterator to the beginning
@@ -187,18 +171,35 @@ class SequenceContainer {
         void unique();                                //removes consecutive duplicate elements
         void sort();                                  //sorts the elements
 
-        //Task 3
-        iterator insert_many(const_iterator pos, ... ); //Inserts new elements into the container directly before pos.  FOR List, Vector.
-        void insert_many_back( ... );  //Appends new elements to the end of the container.  FOR List, Vector, Queue.
-        void insert_many_front( ... ); // Appends new elements to the top of the container. FOR List, Stack.
-
-
+                //Task 3
+        ListIterator insert_many(const ListIterator pos, std::vector<int> args ) {
+            // Проверяем, не пустой ли вектор аргументов
+            if (args.empty()) {
+                return pos; // Возвращаем текущую позицию, если вставлять нечего
+            }
+            // Создаем новый узел списка для хранения первого элемента
+            ListNode* newNode = new ListNode(args[0]);
+            // Вставляем первый элемент перед позицией
+            newNode->next = pos.elemPtr;
+            newNode->prev = pos.elemPtr->prev;
+            newNode->prev->next = newNode;
+            newNode->next->prev = newNode;
+            ++this->count_of_elem;
+            // Вставляем остальные элементы
+            for (size_t i = 1; i < args.size(); ++i) {
+                insert(pos, args[i]);
+            }
+            // Возвращаем новую позицию после вставки всех элементов
+            return ListIterator(newNode);
+        } //Inserts new elements into the container directly before pos.  FOR List, Vector.
+        
+        void insert_many_back( std::vector<int> args );  //Appends new elements to the end of the container.  FOR List, Vector, Queue.
+        void insert_many_front( std::vector<int> args ); // Appends new elements to the top of the container. FOR List, Stack.
 
 
         // А эти для вектора только, оказывается. Хз, зачем их сделела) 
  
         reference operator[](size_type pos);  //access specified element
-        Type* data();  //direct access to the underlying array
         iterator array_data();  //direct access to the underlying array
         void reserve(size_type size); //allocate storage of size elements and copies current array elements to a newely allocated array
         size_type capacity();  //returns the number of elements that can be held in currently allocated storage
@@ -217,7 +218,6 @@ class SequenceContainer {
             return result_ref.elemPtr->data;
         }
 
-    
 };
 
 template <typename Type>            //default constructor, creates empty list
@@ -227,8 +227,17 @@ SequenceContainer<Type>::SequenceContainer() {
     this->tail = this->head;
 }
 
+template <typename Type>            //destructor
+SequenceContainer<Type>::~SequenceContainer() {
+    while (head) {
+        ListNode* next = head->next; // Сохраняем следующий узел
+        delete head;                // Освобождаем память текущего узла
+        head = next;                // Переходим к следующему узлу
+    }
+}
+
 template <typename Type>
-SequenceContainer<Type>::SequenceContainer(size_type n)             //default constructor, creates empty list 
+SequenceContainer<Type>::SequenceContainer(size_type n)             //parametizated constructor
 {
     this->count_of_elem = 0;
     this->head = nullptr;
@@ -264,11 +273,28 @@ SequenceContainer<Type>::SequenceContainer(SequenceContainer &&l)       //move c
 }
 
 template <typename Type>
+SequenceContainer<Type>::SequenceContainer(std::initializer_list<value_type> const &items)       //initialized_list constructor 
+{
+
+
+    this->count_of_elem = 0;
+    this->head = nullptr;
+    this->tail = this->head;
+    ListNode *current = head;
+
+    for (auto it = items.begin(); it != items.end(); ++it) {
+            push_back(*it); // Добавляем каждый элемент из списка в контейнер
+        }
+}
+
+
+template <typename Type>
 void SequenceContainer<Type>::clear()
 {
-    while (this->count_of_elem)
-    {
-        this->pop_front();
+    while (head) {
+        ListNode* next = head->next; // Сохраняем следующий узел
+        delete head;                // Освобождаем память текущего узла
+        head = next;                // Переходим к следующему узлу
     }
 }
 
@@ -322,25 +348,37 @@ inline void SequenceContainer<Type>::pop_back()
 template <typename Type>
 void SequenceContainer<Type>::push_front(const_reference value)
 {
-    this->head = new ListNode(value, this->head);
-    this->head->next->prev = this->head;
+    if (this->head == nullptr) {
+        this->head = new ListNode(value);
+        this->tail = this->head;
+    }
+    else {
+        ListNode* newNode = new ListNode(value);
+        newNode->next = this->head;
+        this->head->prev = newNode;
+        this->head = newNode;
+    }
     this->count_of_elem++;
 }
 
 template <typename Type>
 void SequenceContainer<Type>::pop_front()
 {
-    ListNode* tmp = this->head;
-    this->head = this->head->next;
-    this->head->prev = nullptr;
-    delete tmp;
-    this->count_of_elem--;
+    if (head == nullptr) {
+        // Список уже пуст, ничего делать не нужно
+        return;
+    }
+    ListNode* first = head; // Сохраняем указатель на первый узел
+    head = head->next; // Обновляем голову списка
+    head->prev = nullptr; // Указываем, что новый первый узел не имеет предыдущего
+    // Освобождаем память первого узла
+    delete first;
+    count_of_elem--; // Уменьшаем количество элементов
 }
 
 template <typename Type>
 inline void SequenceContainer<Type>::swap(SequenceContainer &other)
 {
-
 //есть стд свап он сам делает
     ListNode *tmp_this = this->head;
     ListNode *tmp_other = other.head;
@@ -352,20 +390,15 @@ inline void SequenceContainer<Type>::swap(SequenceContainer &other)
     this->count_of_elem = other_size;
     other.count_of_elem = this_size;
     //тут возможно нужно ещё с хвостами что-то сделать, но я не знаю как
-
 }
 
 template <typename Type>
 inline void SequenceContainer<Type>::merge(SequenceContainer &other)
 {
-    //лучше скопировать, иначе если второй удалить, то будет плохо
-    SequenceContainer tmp(&other);
-
-    this->tail->next = other.head;
-    tmp.head->prev = this->tail;
-    this->tail = tmp.tail;
+    for (int i = 0; i < other.count_of_elem; i++) {
+        this->push_back(other[i]);
+    }
     this->sort();
-    this->count_of_elem = this->count_of_elem + tmp.count_of_elem;
 }
 
 template <typename Type>
@@ -465,12 +498,6 @@ inline void SequenceContainer<Type>::fill(const_reference value)
 }
 
 template <typename Type>
-SequenceContainer<Type>::~SequenceContainer()
-{
-    this->clear();
-}
-
-template <typename Type>
 Type & SequenceContainer<Type>::operator[](size_type pos)
 {
     int count = 0;
@@ -485,6 +512,29 @@ Type & SequenceContainer<Type>::operator[](size_type pos)
     Type &res = res1;
     return res;
 }
+
+template <typename Type>
+inline void SequenceContainer<Type>::insert_many_back( std::vector<int> args )
+{
+    if (!args.empty()) {
+        // Используем метод push_back для вставки каждого элемента из вектора
+        for (int value : args) {
+            push_back(value);
+        }
+    }
+}
+
+template <typename Type>
+inline void SequenceContainer<Type>::insert_many_front( std::vector<int> args )
+{
+    if (!args.empty()) {
+        // Используем метод push_back для вставки каждого элемента из вектора
+        for (int value : args) {
+            push_front(value);
+        }
+    }
+}
+
 
 }
 #endif
